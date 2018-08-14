@@ -6,7 +6,10 @@ namespace CHC_Image_Builder
     {
         static void Main(string[] args)
         {
-            Console.WriteLine("Hello World!");
+            var imageConfiguration = new ImageConfiguration();
+            var info = imageConfiguration.GetImageInfo();
+
+            var pause = Console.ReadLine();
         }
     }
 }
