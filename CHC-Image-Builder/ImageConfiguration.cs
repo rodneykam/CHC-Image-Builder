@@ -32,6 +32,11 @@ namespace CHC_Image_Builder
 
             var imageInfo = deserializer.Deserialize<ImageInfo>(input);
 
+            return imageInfo;
+        }
+
+        public void ShowImageInfo(ImageInfo imageInfo)
+        {
             Console.WriteLine("Image Info");
             Console.WriteLine("-----------------------------");
             Console.WriteLine("Name: {0}", imageInfo.Name);
@@ -40,9 +45,6 @@ namespace CHC_Image_Builder
             Console.WriteLine("   Publisher: {0}", imageInfo.OSImage.Publisher);
             Console.WriteLine("   Offer: {0}", imageInfo.OSImage.Offer);
             Console.WriteLine("   SKU: {0}", imageInfo.OSImage.SKU);
-            return imageInfo;
         }
-
-
     }
 }
