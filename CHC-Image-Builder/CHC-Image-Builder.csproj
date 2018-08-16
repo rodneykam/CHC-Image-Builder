@@ -6,10 +6,14 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="authorization.yaml" />
     <None Remove="Image.yaml" />
   </ItemGroup>
 
   <ItemGroup>
+    <Content Include="authorization.yaml">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <Content Include="Image.yaml">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
