@@ -1,5 +1,5 @@
 ﻿Name:  Windows 2012 R2 Hardened Image
-OSType:  WINDOWS # WINDOWS | LINUX
+OSType:  WINDOWS #{WINDOWS | LINUX}
 OSImage:
   Publisher: MicrosoftWindowsServer
   Offer: WindowsServer
