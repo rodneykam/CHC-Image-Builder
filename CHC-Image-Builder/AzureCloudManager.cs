@@ -7,6 +7,7 @@ using System.Configuration;
 using Microsoft.Azure.Management.ResourceManager.Fluent;
 using Microsoft.Azure.Management.Fluent;
 using Microsoft.Azure.Management.ResourceManager.Fluent.Core;
+using static CHC_Image_Builder.ImageConfiguration;
 
 namespace CHC_Image_Builder
 {
@@ -16,6 +17,8 @@ namespace CHC_Image_Builder
         private string _clientId { get; set; }
         private string _clientKey { get; set; }
         private string _tenantId { get; set; }
+
+        private IAzure _azure;
 
         public AzureCloudManager()
         {
@@ -48,19 +51,15 @@ namespace CHC_Image_Builder
                     Console.WriteLine("Error reading Authorization File");
                     throw;
                 }
+                Program.log.Info("Azure Authorization");
+                Program.log.Info("-------------------");
+                Program.log.Info(string.Format("  SubscriptionId: {0}", _subscriptionId));
+                Program.log.Info(string.Format("  ClientId: {0}", _clientId));
+                Program.log.Info(string.Format("  ClientKey: {0}........", _clientKey.Substring(0, 8)));
+                Program.log.Info(string.Format("  TenantId: {0}", _tenantId));
             }
         }
-        public void ShowAuthorization()
-        {
-            Console.WriteLine("\nAzure Authorization");
-            Console.WriteLine("-------------------");
-            Console.WriteLine("  SubscriptionId: {0}", _subscriptionId);
-            Console.WriteLine("  ClientId: {0}", _clientId);
-            Console.WriteLine("  ClientKey: {0}........", _clientKey.Substring(0,8));
-            Console.WriteLine("  TenantId: {0}", _tenantId);
-        }
-
-        public IAzure Authenticate()
+        private bool Authenticate()
         {
             var credentials = SdkContext.AzureCredentialsFactory
                 .FromServicePrincipal(_clientId,
@@ -68,13 +67,20 @@ namespace CHC_Image_Builder
                         _tenantId,
                         AzureEnvironment.AzureGlobalCloud);
 
-            var azure = Azure
+            _azure = Azure
                 .Configure()
                 .WithLogLevel(HttpLoggingDelegatingHandler.Level.Basic)
                 .Authenticate(credentials)
                 .WithSubscription(_subscriptionId);
 
-            return azure;
+            return true;
+        }
+
+        public bool CreateVMImage(ImageInfo imageInfo)
+        {
+            
+
+            return true;
         }
     }
 

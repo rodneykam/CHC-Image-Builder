@@ -30,21 +30,18 @@ namespace CHC_Image_Builder
             var deserializer = new DeserializerBuilder()
                 .Build();
 
-            var imageInfo = deserializer.Deserialize<ImageInfo>(input);
+           var imageInfo = deserializer.Deserialize<ImageInfo>(input);
+
+            Program.log.Info("Image Info");
+            Program.log.Info("-----------------------------");
+            Program.log.Info(string.Format("Name: {0}", imageInfo.Name));
+            Program.log.Info(string.Format("OSType: {0}", imageInfo.OSType));
+            Program.log.Info(string.Format("OS Image:"));
+            Program.log.Info(string.Format("   Publisher: {0}", imageInfo.OSImage.Publisher));
+            Program.log.Info(string.Format("   Offer: {0}", imageInfo.OSImage.Offer));
+            Program.log.Info(string.Format("   SKU: {0}", imageInfo.OSImage.SKU));
 
             return imageInfo;
-        }
-
-        public void ShowImageInfo(ImageInfo imageInfo)
-        {
-            Console.WriteLine("Image Info");
-            Console.WriteLine("-----------------------------");
-            Console.WriteLine("Name: {0}", imageInfo.Name);
-            Console.WriteLine("OSType: {0}", imageInfo.OSType);
-            Console.WriteLine("OS Image:");
-            Console.WriteLine("   Publisher: {0}", imageInfo.OSImage.Publisher);
-            Console.WriteLine("   Offer: {0}", imageInfo.OSImage.Offer);
-            Console.WriteLine("   SKU: {0}", imageInfo.OSImage.SKU);
         }
     }
 }

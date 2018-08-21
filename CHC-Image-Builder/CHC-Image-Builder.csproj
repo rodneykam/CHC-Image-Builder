@@ -8,6 +8,7 @@
   <ItemGroup>
     <None Remove="authorization.yaml" />
     <None Remove="Image.yaml" />
+    <None Remove="log4net.config" />
   </ItemGroup>
 
   <ItemGroup>
@@ -17,10 +18,15 @@
     <Content Include="Image.yaml">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+    <Content Include="log4net.config">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="log4net" Version="2.0.8" />
     <PackageReference Include="Microsoft.Azure.Management.Fluent" Version="1.14.0" />
+    <PackageReference Include="Microsoft.extensions.Logging" Version="2.1.1" />
     <PackageReference Include="System.Configuration.ConfigurationManager" Version="4.5.0" />
     <PackageReference Include="YamlDotNet.NetCore" Version="1.0.0" />
   </ItemGroup>
