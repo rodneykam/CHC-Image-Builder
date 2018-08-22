@@ -43,6 +43,7 @@ namespace CHC_Image_Builder
                 ts.Hours, ts.Minutes, ts.Seconds,
                 ts.Milliseconds / 10);
             Console.WriteLine("RunTime " + elapsedTime);
+            log.Info("RunTime " + elapsedTime);
         }
 
     }

@@ -133,6 +133,15 @@ namespace CHC_Image_Builder
                     .WithComputerName(vmName)
                     .WithSize(imageInfo.OSImage.VMSizeType)
                     .Create();
+
+                Program.log.InfoFormat("Creating virtual machine...{0} Complete!", vmName);
+
+                Program.log.InfoFormat("Deallocating virtual machine...{0}", vmName);
+                var vm = azure.VirtualMachines.GetByResourceGroup(groupName, vmName);
+                vm.Deallocate();
+
+                
+            
             }
             catch (Exception e)
             {
