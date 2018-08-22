@@ -8,6 +8,7 @@ using Microsoft.Azure.Management.ResourceManager.Fluent;
 using Microsoft.Azure.Management.Fluent;
 using Microsoft.Azure.Management.ResourceManager.Fluent.Core;
 using static CHC_Image_Builder.ImageConfiguration;
+using Microsoft.Azure.Management.Compute.Fluent.Models;
 
 namespace CHC_Image_Builder
 {
@@ -140,7 +141,56 @@ namespace CHC_Image_Builder
                 var vm = azure.VirtualMachines.GetByResourceGroup(groupName, vmName);
                 vm.Deallocate();
 
-                
+                Program.log.Info("Getting information about the virtual machine...");
+                Program.log.Info("hardwareProfile");
+                Program.log.Info("   vmSize: " + vm.Size);
+                Program.log.Info("storageProfile");
+                Program.log.Info("  imageReference");
+                Program.log.Info("    publisher: " + vm.StorageProfile.ImageReference.Publisher);
+                Program.log.Info("    offer: " + vm.StorageProfile.ImageReference.Offer);
+                Program.log.Info("    sku: " + vm.StorageProfile.ImageReference.Sku);
+                Program.log.Info("    version: " + vm.StorageProfile.ImageReference.Version);
+                Program.log.Info("  osDisk");
+                Program.log.Info("    osType: " + vm.StorageProfile.OsDisk.OsType);
+                Program.log.Info("    name: " + vm.StorageProfile.OsDisk.Name);
+                Program.log.Info("    createOption: " + vm.StorageProfile.OsDisk.CreateOption);
+                Program.log.Info("    caching: " + vm.StorageProfile.OsDisk.Caching);
+                Program.log.Info("osProfile");
+                Program.log.Info("  computerName: " + vm.OSProfile.ComputerName);
+                Program.log.Info("  adminUsername: " + vm.OSProfile.AdminUsername);
+                Program.log.Info("  provisionVMAgent: " + vm.OSProfile.WindowsConfiguration.ProvisionVMAgent.Value);
+                Program.log.Info("  enableAutomaticUpdates: " + vm.OSProfile.WindowsConfiguration.EnableAutomaticUpdates.Value);
+                Program.log.Info("networkProfile");
+                foreach (string nicId in vm.NetworkInterfaceIds)
+                {
+                    Program.log.Info("  networkInterface id: " + nicId);
+                }
+                Program.log.Info("disks");
+                foreach (DiskInstanceView disk in vm.InstanceView.Disks)
+                {
+                    Program.log.Info("  name: " + disk.Name);
+                    Program.log.Info("  statuses");
+                    foreach (InstanceViewStatus stat in disk.Statuses)
+                    {
+                        Program.log.Info("    code: " + stat.Code);
+                        Program.log.Info("    level: " + stat.Level);
+                        Program.log.Info("    displayStatus: " + stat.DisplayStatus);
+                        Program.log.Info("    time: " + stat.Time);
+                    }
+                }
+                Program.log.Info("VM general status");
+                Program.log.Info("  provisioningStatus: " + vm.ProvisioningState);
+                Program.log.Info("  id: " + vm.Id);
+                Program.log.Info("  name: " + vm.Name);
+                Program.log.Info("  type: " + vm.Type);
+                Program.log.Info("  location: " + vm.Region);
+                Program.log.Info("VM instance status");
+                foreach (InstanceViewStatus stat in vm.InstanceView.Statuses)
+                {
+                    Program.log.Info("  code: " + stat.Code);
+                    Program.log.Info("  level: " + stat.Level);
+                    Program.log.Info("  displayStatus: " + stat.DisplayStatus);
+                }
             
             }
             catch (Exception e)
