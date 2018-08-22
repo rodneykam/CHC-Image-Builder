@@ -1,6 +1,9 @@
 ﻿Name:  Windows 2012 R2 Hardened Image
 OSType:  WINDOWS #{WINDOWS | LINUX}
+AdminUser: azureuser
+AdminPW: azure123123!
 OSImage:
   Publisher: MicrosoftWindowsServer
   Offer: WindowsServer
-  SKU:    1012-R2-Datacenter
+  SKU:    2012-R2-Datacenter
+  VMSizeType: Standard_DS1_v2

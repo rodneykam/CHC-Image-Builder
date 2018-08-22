@@ -13,12 +13,15 @@ namespace CHC_Image_Builder
             public string Publisher { get; set; }
             public string Offer { get; set; }
             public string SKU { get; set; }
+            public string VMSizeType { get; set; }
         }
 
         public class ImageInfo
         {
             public string Name { get; set; }
             public string OSType { get; set; }
+            public string AdminUser { get; set; }
+            public string AdminPW { get; set; }
             public OSImageInfo OSImage { get; set; }
         }
 
@@ -32,14 +35,17 @@ namespace CHC_Image_Builder
 
            var imageInfo = deserializer.Deserialize<ImageInfo>(input);
 
-            Program.log.Info("Image Info");
-            Program.log.Info("-----------------------------");
-            Program.log.Info(string.Format("Name: {0}", imageInfo.Name));
-            Program.log.Info(string.Format("OSType: {0}", imageInfo.OSType));
-            Program.log.Info(string.Format("OS Image:"));
-            Program.log.Info(string.Format("   Publisher: {0}", imageInfo.OSImage.Publisher));
-            Program.log.Info(string.Format("   Offer: {0}", imageInfo.OSImage.Offer));
-            Program.log.Info(string.Format("   SKU: {0}", imageInfo.OSImage.SKU));
+            Program.log.Debug("Image Info");
+            Program.log.Debug("-----------------------------");
+            Program.log.DebugFormat("Name: {0}", imageInfo.Name);
+            Program.log.DebugFormat("OSType: {0}", imageInfo.OSType);
+            Program.log.DebugFormat("AdminUser: {0}", imageInfo.AdminUser);
+            Program.log.DebugFormat("AdminPW: {0}", imageInfo.AdminPW);
+            Program.log.DebugFormat("OS Image:");
+            Program.log.DebugFormat("   Publisher: {0}", imageInfo.OSImage.Publisher);
+            Program.log.DebugFormat("   Offer: {0}", imageInfo.OSImage.Offer);
+            Program.log.DebugFormat("   SKU: {0}", imageInfo.OSImage.SKU);
+            Program.log.DebugFormat("   VMSizeType: {0}", imageInfo.OSImage.VMSizeType);
 
             return imageInfo;
         }

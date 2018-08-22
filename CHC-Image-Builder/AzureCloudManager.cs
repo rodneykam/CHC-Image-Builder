@@ -17,8 +17,7 @@ namespace CHC_Image_Builder
         private string _clientId { get; set; }
         private string _clientKey { get; set; }
         private string _tenantId { get; set; }
-
-        private IAzure _azure;
+        private Region _location = Region.USWest;
 
         public AzureCloudManager()
         {
@@ -48,38 +47,98 @@ namespace CHC_Image_Builder
                 }
                 catch (Exception e)
                 {
-                    Console.WriteLine("Error reading Authorization File");
+                    Program.log.Error(e);
                     throw;
                 }
-                Program.log.Info("Azure Authorization");
-                Program.log.Info("-------------------");
-                Program.log.Info(string.Format("  SubscriptionId: {0}", _subscriptionId));
-                Program.log.Info(string.Format("  ClientId: {0}", _clientId));
-                Program.log.Info(string.Format("  ClientKey: {0}........", _clientKey.Substring(0, 8)));
-                Program.log.Info(string.Format("  TenantId: {0}", _tenantId));
+                Program.log.Debug("Azure Authorization");
+                Program.log.Debug("-------------------");
+                Program.log.DebugFormat("  SubscriptionId: {0}", _subscriptionId);
+                Program.log.DebugFormat("  ClientId: {0}", _clientId);
+                Program.log.DebugFormat("  ClientKey: {0}........", _clientKey.Substring(0, 8));
+                Program.log.DebugFormat("  TenantId: {0}", _tenantId);
             }
         }
-        private bool Authenticate()
+        private IAzure Authenticate()
         {
-            var credentials = SdkContext.AzureCredentialsFactory
-                .FromServicePrincipal(_clientId,
-                        _clientKey,
-                        _tenantId,
-                        AzureEnvironment.AzureGlobalCloud);
+            IAzure azure;
+            try{
+                var credentials = SdkContext.AzureCredentialsFactory
+                    .FromServicePrincipal(_clientId,
+                            _clientKey,
+                            _tenantId,
+                            AzureEnvironment.AzureGlobalCloud);
 
-            _azure = Azure
-                .Configure()
-                .WithLogLevel(HttpLoggingDelegatingHandler.Level.Basic)
-                .Authenticate(credentials)
-                .WithSubscription(_subscriptionId);
+                azure = Azure
+                    .Configure()
+                    .WithLogLevel(HttpLoggingDelegatingHandler.Level.Basic)
+                    .Authenticate(credentials)
+                    .WithSubscription(_subscriptionId);
+            }
+            catch (Exception e)
+            {
+                Program.log.Error(e);
+                throw;
+            }
 
-            return true;
+            return azure;
         }
 
         public bool CreateVMImage(ImageInfo imageInfo)
         {
-            
+            var azure = Authenticate();
 
+            try 
+            {
+                var guidVM = Guid.NewGuid().ToString();
+                var groupName = guidVM + "-rg";
+                Program.log.InfoFormat("Creating Resource Group {0}", groupName);
+                var resourceGroup = azure.ResourceGroups.Define(groupName)
+                    .WithRegion(_location)
+                    .Create();
+
+                Program.log.Info("Creating public IP address...");
+                var publicIPAddress = azure.PublicIPAddresses.Define(guidVM + "-pubip")
+                    .WithRegion(_location)
+                    .WithExistingResourceGroup(groupName)
+                    .WithStaticIP()
+                    .Create();
+
+                Program.log.Info("Creating virtual network...");
+                var subnetName = guidVM + "-subnet"; 
+                var network = azure.Networks.Define(guidVM + "-vnet")
+                    .WithRegion(_location)
+                    .WithExistingResourceGroup(groupName)
+                    .WithAddressSpace("10.0.0.0/16")
+                    .WithSubnet(subnetName, "10.0.0.0/24")
+                    .Create();
+
+                Program.log.Info("Creating network interface...");
+                var networkInterface = azure.NetworkInterfaces.Define(guidVM + "-NIC")
+                    .WithRegion(_location)
+                    .WithExistingResourceGroup(groupName)
+                    .WithExistingPrimaryNetwork(network)
+                    .WithSubnet(subnetName)
+                    .WithPrimaryPrivateIPAddressDynamic()
+                    .Create();
+
+                var vmName = guidVM.Substring(0,12) + "-vm";
+                Program.log.InfoFormat("Creating virtual machine...{0}", vmName);
+                azure.VirtualMachines.Define(vmName)
+                    .WithRegion(_location)
+                    .WithExistingResourceGroup(groupName)
+                    .WithExistingPrimaryNetworkInterface(networkInterface)
+                    .WithLatestWindowsImage(imageInfo.OSImage.Publisher, imageInfo.OSImage.Offer, imageInfo.OSImage.SKU)
+                    .WithAdminUsername("azureuser")
+                    .WithAdminPassword("Azure12345678")
+                    .WithComputerName(vmName)
+                    .WithSize(imageInfo.OSImage.VMSizeType)
+                    .Create();
+            }
+            catch (Exception e)
+            {
+                Program.log.Error(e);
+                throw;
+            }
             return true;
         }
     }
