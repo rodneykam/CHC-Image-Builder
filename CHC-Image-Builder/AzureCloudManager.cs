@@ -19,6 +19,8 @@ namespace CHC_Image_Builder
         private string _clientKey { get; set; }
         private string _tenantId { get; set; }
         private Region _location = Region.USWest;
+        private IAzure _azure { get; set; }
+        private ImageInfo _imageInfo { get; set; }
 
         public AzureCloudManager()
         {
@@ -48,28 +50,28 @@ namespace CHC_Image_Builder
                 }
                 catch (Exception e)
                 {
-                    Program.log.Error(e);
+                   Logger.log.Error(e);
                     throw;
                 }
-                Program.log.Debug("Azure Authorization");
-                Program.log.Debug("-------------------");
-                Program.log.DebugFormat("  SubscriptionId: {0}", _subscriptionId);
-                Program.log.DebugFormat("  ClientId: {0}", _clientId);
-                Program.log.DebugFormat("  ClientKey: {0}........", _clientKey.Substring(0, 8));
-                Program.log.DebugFormat("  TenantId: {0}", _tenantId);
+               Logger.log.Debug("Azure Authorization");
+               Logger.log.Debug("-------------------");
+               Logger.log.DebugFormat("  SubscriptionId: {0}", _subscriptionId);
+               Logger.log.DebugFormat("  ClientId: {0}", _clientId);
+               Logger.log.DebugFormat("  ClientKey: {0}........", _clientKey.Substring(0, 8));
+               Logger.log.DebugFormat("  TenantId: {0}", _tenantId);
             }
         }
-        private IAzure Authenticate()
+        private void Authenticate()
         {
-            IAzure azure;
-            try{
+            try
+            {
                 var credentials = SdkContext.AzureCredentialsFactory
                     .FromServicePrincipal(_clientId,
                             _clientKey,
                             _tenantId,
                             AzureEnvironment.AzureGlobalCloud);
 
-                azure = Azure
+                _azure = Azure
                     .Configure()
                     .WithLogLevel(HttpLoggingDelegatingHandler.Level.Basic)
                     .Authenticate(credentials)
@@ -77,128 +79,133 @@ namespace CHC_Image_Builder
             }
             catch (Exception e)
             {
-                Program.log.Error(e);
+               Logger.log.Error(e);
                 throw;
             }
 
-            return azure;
         }
 
-        public bool CreateVMImage(ImageInfo imageInfo)
+        public void CreateVMImage(ImageInfo imageInfo)
         {
-            var azure = Authenticate();
+            _imageInfo = imageInfo;
+            Authenticate();    
+            CreateVM();
 
+        }
+        public void CreateVM()
+        {
             try 
             {
                 var guidVM = Guid.NewGuid().ToString();
-                var groupName = guidVM + "-rg";
-                Program.log.InfoFormat("Creating Resource Group {0}", groupName);
-                var resourceGroup = azure.ResourceGroups.Define(groupName)
+                _imageInfo.GroupName = guidVM + "-rg";
+               Logger.log.InfoFormat("Creating Resource Group {0}", _imageInfo.GroupName);
+                var resourceGroup = _azure.ResourceGroups.Define(_imageInfo.GroupName)
                     .WithRegion(_location)
                     .Create();
 
-                Program.log.Info("Creating public IP address...");
-                var publicIPAddress = azure.PublicIPAddresses.Define(guidVM + "-pubip")
+               Logger.log.Info("Creating public IP address...");
+                var publicIPAddress = _azure.PublicIPAddresses.Define(guidVM + "-pubip")
                     .WithRegion(_location)
-                    .WithExistingResourceGroup(groupName)
+                    .WithExistingResourceGroup(_imageInfo.GroupName)
                     .WithStaticIP()
                     .Create();
 
-                Program.log.Info("Creating virtual network...");
+               Logger.log.Info("Creating virtual network...");
                 var subnetName = guidVM + "-subnet"; 
-                var network = azure.Networks.Define(guidVM + "-vnet")
+                var network = _azure.Networks.Define(guidVM + "-vnet")
                     .WithRegion(_location)
-                    .WithExistingResourceGroup(groupName)
+                    .WithExistingResourceGroup(_imageInfo.GroupName)
                     .WithAddressSpace("10.0.0.0/16")
                     .WithSubnet(subnetName, "10.0.0.0/24")
                     .Create();
 
-                Program.log.Info("Creating network interface...");
-                var networkInterface = azure.NetworkInterfaces.Define(guidVM + "-NIC")
+               Logger.log.Info("Creating network interface...");
+                var networkInterface = _azure.NetworkInterfaces.Define(guidVM + "-NIC")
                     .WithRegion(_location)
-                    .WithExistingResourceGroup(groupName)
+                    .WithExistingResourceGroup(_imageInfo.GroupName)
                     .WithExistingPrimaryNetwork(network)
                     .WithSubnet(subnetName)
                     .WithPrimaryPrivateIPAddressDynamic()
                     .Create();
 
-                var vmName = guidVM.Substring(0,12) + "-vm";
-                Program.log.InfoFormat("Creating virtual machine...{0}", vmName);
-                azure.VirtualMachines.Define(vmName)
+                _imageInfo.VMName = guidVM.Substring(0,12) + "-vm";
+                Logger.log.InfoFormat("Creating virtual machine...{0}", _imageInfo.VMName);
+                _azure.VirtualMachines.Define(_imageInfo.VMName)
                     .WithRegion(_location)
-                    .WithExistingResourceGroup(groupName)
+                    .WithExistingResourceGroup(_imageInfo.GroupName)
                     .WithExistingPrimaryNetworkInterface(networkInterface)
-                    .WithLatestWindowsImage(imageInfo.OSImage.Publisher, imageInfo.OSImage.Offer, imageInfo.OSImage.SKU)
+                    .WithLatestWindowsImage(_imageInfo.OSImage.Publisher, _imageInfo.OSImage.Offer, _imageInfo.OSImage.SKU)
                     .WithAdminUsername("azureuser")
                     .WithAdminPassword("Azure12345678")
-                    .WithComputerName(vmName)
-                    .WithSize(imageInfo.OSImage.VMSizeType)
+                    .WithComputerName(_imageInfo.VMName)
+                    .WithSize(_imageInfo.OSImage.VMSizeType)
                     .Create();
 
-                Program.log.InfoFormat("Creating virtual machine...{0} Complete!", vmName);
+               Logger.log.InfoFormat("Creating virtual machine...{0} Complete!", _imageInfo.VMName);
 
-                Program.log.InfoFormat("Deallocating virtual machine...{0}", vmName);
-                var vm = azure.VirtualMachines.GetByResourceGroup(groupName, vmName);
+               Logger.log.InfoFormat("Deallocating and Generalize virtual machine...{0}", _imageInfo.VMName);
+                var vm = _azure.VirtualMachines.GetByResourceGroup(_imageInfo.GroupName, _imageInfo.VMName);
                 vm.Deallocate();
+                vm.Generalize();
 
-                Program.log.Info("Getting information about the virtual machine...");
-                Program.log.Info("hardwareProfile");
-                Program.log.Info("   vmSize: " + vm.Size);
-                Program.log.Info("storageProfile");
-                Program.log.Info("  imageReference");
-                Program.log.Info("    publisher: " + vm.StorageProfile.ImageReference.Publisher);
-                Program.log.Info("    offer: " + vm.StorageProfile.ImageReference.Offer);
-                Program.log.Info("    sku: " + vm.StorageProfile.ImageReference.Sku);
-                Program.log.Info("    version: " + vm.StorageProfile.ImageReference.Version);
-                Program.log.Info("  osDisk");
-                Program.log.Info("    osType: " + vm.StorageProfile.OsDisk.OsType);
-                Program.log.Info("    name: " + vm.StorageProfile.OsDisk.Name);
-                Program.log.Info("    createOption: " + vm.StorageProfile.OsDisk.CreateOption);
-                Program.log.Info("    caching: " + vm.StorageProfile.OsDisk.Caching);
-                Program.log.Info("osProfile");
-                Program.log.Info("  computerName: " + vm.OSProfile.ComputerName);
-                Program.log.Info("  adminUsername: " + vm.OSProfile.AdminUsername);
-                Program.log.Info("  provisionVMAgent: " + vm.OSProfile.WindowsConfiguration.ProvisionVMAgent.Value);
-                Program.log.Info("  enableAutomaticUpdates: " + vm.OSProfile.WindowsConfiguration.EnableAutomaticUpdates.Value);
-                Program.log.Info("networkProfile");
+               Logger.log.Info("Getting information about the virtual machine...");
+               Logger.log.Info("hardwareProfile");
+               Logger.log.Info("   vmSize: " + vm.Size);
+               Logger.log.Info("storageProfile");
+               Logger.log.Info("  imageReference");
+               Logger.log.Info("    publisher: " + vm.StorageProfile.ImageReference.Publisher);
+               Logger.log.Info("    offer: " + vm.StorageProfile.ImageReference.Offer);
+               Logger.log.Info("    sku: " + vm.StorageProfile.ImageReference.Sku);
+               Logger.log.Info("    version: " + vm.StorageProfile.ImageReference.Version);
+               Logger.log.Info("  osDisk");
+               Logger.log.Info("    osType: " + vm.StorageProfile.OsDisk.OsType);
+               Logger.log.Info("    name: " + vm.StorageProfile.OsDisk.Name);
+               Logger.log.Info("    createOption: " + vm.StorageProfile.OsDisk.CreateOption);
+               Logger.log.Info("    caching: " + vm.StorageProfile.OsDisk.Caching);
+               Logger.log.Info("osProfile");
+               Logger.log.Info("  computerName: " + vm.OSProfile.ComputerName);
+               Logger.log.Info("  adminUsername: " + vm.OSProfile.AdminUsername);
+               Logger.log.Info("  provisionVMAgent: " + vm.OSProfile.WindowsConfiguration.ProvisionVMAgent.Value);
+               Logger.log.Info("  enableAutomaticUpdates: " + vm.OSProfile.WindowsConfiguration.EnableAutomaticUpdates.Value);
+               Logger.log.Info("networkProfile");
                 foreach (string nicId in vm.NetworkInterfaceIds)
                 {
-                    Program.log.Info("  networkInterface id: " + nicId);
+                   Logger.log.Info("  networkInterface id: " + nicId);
                 }
-                Program.log.Info("disks");
+               Logger.log.Info("disks");
                 foreach (DiskInstanceView disk in vm.InstanceView.Disks)
                 {
-                    Program.log.Info("  name: " + disk.Name);
-                    Program.log.Info("  statuses");
+                   Logger.log.Info("  name: " + disk.Name);
+                   Logger.log.Info("  statuses");
                     foreach (InstanceViewStatus stat in disk.Statuses)
                     {
-                        Program.log.Info("    code: " + stat.Code);
-                        Program.log.Info("    level: " + stat.Level);
-                        Program.log.Info("    displayStatus: " + stat.DisplayStatus);
-                        Program.log.Info("    time: " + stat.Time);
+                       Logger.log.Info("    code: " + stat.Code);
+                       Logger.log.Info("    level: " + stat.Level);
+                       Logger.log.Info("    displayStatus: " + stat.DisplayStatus);
+                       Logger.log.Info("    time: " + stat.Time);
                     }
                 }
-                Program.log.Info("VM general status");
-                Program.log.Info("  provisioningStatus: " + vm.ProvisioningState);
-                Program.log.Info("  id: " + vm.Id);
-                Program.log.Info("  name: " + vm.Name);
-                Program.log.Info("  type: " + vm.Type);
-                Program.log.Info("  location: " + vm.Region);
-                Program.log.Info("VM instance status");
+               Logger.log.Info("VM general status");
+               Logger.log.Info("  provisioningStatus: " + vm.ProvisioningState);
+               Logger.log.Info("  id: " + vm.Id);
+               Logger.log.Info("  name: " + vm.Name);
+               Logger.log.Info("  type: " + vm.Type);
+               Logger.log.Info("  location: " + vm.Region);
+               Logger.log.Info("VM instance status");
                 foreach (InstanceViewStatus stat in vm.InstanceView.Statuses)
                 {
-                    Program.log.Info("  code: " + stat.Code);
-                    Program.log.Info("  level: " + stat.Level);
-                    Program.log.Info("  displayStatus: " + stat.DisplayStatus);
+                   Logger.log.Info("  code: " + stat.Code);
+                   Logger.log.Info("  level: " + stat.Level);
+                   Logger.log.Info("  displayStatus: " + stat.DisplayStatus);
                 }
-            
+
             }
             catch (Exception e)
             {
-                Program.log.Error(e);
+                Logger.log.Error(e);
                 throw;
             }
-            return true;
+
         }
     }
 

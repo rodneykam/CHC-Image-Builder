@@ -22,6 +22,9 @@ namespace CHC_Image_Builder
             public string OSType { get; set; }
             public string AdminUser { get; set; }
             public string AdminPW { get; set; }
+            public string ImageName { get; set; }
+            public string VMName { get; set; }
+            public string GroupName { get; set; }
             public OSImageInfo OSImage { get; set; }
         }
 
@@ -35,17 +38,18 @@ namespace CHC_Image_Builder
 
            var imageInfo = deserializer.Deserialize<ImageInfo>(input);
 
-            Program.log.Debug("Image Info");
-            Program.log.Debug("-----------------------------");
-            Program.log.DebugFormat("Name: {0}", imageInfo.Name);
-            Program.log.DebugFormat("OSType: {0}", imageInfo.OSType);
-            Program.log.DebugFormat("AdminUser: {0}", imageInfo.AdminUser);
-            Program.log.DebugFormat("AdminPW: {0}", imageInfo.AdminPW);
-            Program.log.DebugFormat("OS Image:");
-            Program.log.DebugFormat("   Publisher: {0}", imageInfo.OSImage.Publisher);
-            Program.log.DebugFormat("   Offer: {0}", imageInfo.OSImage.Offer);
-            Program.log.DebugFormat("   SKU: {0}", imageInfo.OSImage.SKU);
-            Program.log.DebugFormat("   VMSizeType: {0}", imageInfo.OSImage.VMSizeType);
+            Logger.log.Debug("Image Info");
+            Logger.log.Debug("-----------------------------");
+            Logger.log.DebugFormat("Name: {0}", imageInfo.Name);
+            Logger.log.DebugFormat("OSType: {0}", imageInfo.OSType);
+            Logger.log.DebugFormat("AdminUser: {0}", imageInfo.AdminUser);
+            Logger.log.DebugFormat("AdminPW: {0}", imageInfo.AdminPW);
+            Logger.log.DebugFormat("ImageName: {0}", imageInfo.ImageName);
+            Logger.log.DebugFormat("OS Image:");
+            Logger.log.DebugFormat("   Publisher: {0}", imageInfo.OSImage.Publisher);
+            Logger.log.DebugFormat("   Offer: {0}", imageInfo.OSImage.Offer);
+            Logger.log.DebugFormat("   SKU: {0}", imageInfo.OSImage.SKU);
+            Logger.log.DebugFormat("   VMSizeType: {0}", imageInfo.OSImage.VMSizeType);
 
             return imageInfo;
         }

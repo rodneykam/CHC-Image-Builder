@@ -2,6 +2,7 @@
 OSType:  WINDOWS #{WINDOWS | LINUX}
 AdminUser: azureuser
 AdminPW: azure123123!
+ImageName: Win2K12R2
 OSImage:
   Publisher: MicrosoftWindowsServer
   Offer: WindowsServer
