@@ -9,9 +9,14 @@ using Microsoft.Azure.Management.Fluent;
 using Microsoft.Azure.Management.ResourceManager.Fluent.Core;
 using static CHC_Image_Builder.ImageConfiguration;
 using Microsoft.Azure.Management.Compute.Fluent.Models;
+using Microsoft.Azure.Management.Storage.Fluent.Models;
+using Microsoft.WindowsAzure.Storage;
+using Microsoft.WindowsAzure.Storage.Blob;
+using Microsoft.Azure.Management.Storage.Fluent;
 
 namespace CHC_Image_Builder
 {
+
     class AzureCloudManager
     {
         private string _subscriptionId { get; set; }
@@ -135,8 +140,8 @@ namespace CHC_Image_Builder
                     .WithExistingResourceGroup(_imageInfo.GroupName)
                     .WithExistingPrimaryNetworkInterface(networkInterface)
                     .WithLatestWindowsImage(_imageInfo.OSImage.Publisher, _imageInfo.OSImage.Offer, _imageInfo.OSImage.SKU)
-                    .WithAdminUsername("azureuser")
-                    .WithAdminPassword("Azure12345678")
+                    .WithAdminUsername(_imageInfo.AdminUser)
+                    .WithAdminPassword(_imageInfo.AdminPW)
                     .WithComputerName(_imageInfo.VMName)
                     .WithSize(_imageInfo.OSImage.VMSizeType)
                     .Create();
@@ -199,6 +204,8 @@ namespace CHC_Image_Builder
                    Logger.log.Info("  displayStatus: " + stat.DisplayStatus);
                 }
 
+                Logger.log.Info("Capturing VM Image...");
+                vm.Capture("tempContainer","WIN2K12", true);
             }
             catch (Exception e)
             {
@@ -207,7 +214,8 @@ namespace CHC_Image_Builder
             }
 
         }
-    }
 
+
+    }
 
 }
