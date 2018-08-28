@@ -1,28 +1,60 @@
 $ErrorActionPreference = "Stop"
 
 $script:StartTime = $(get-date)
-
-Write-Host "Connecting to Azure..."
-$applicationId = "f1659788-41eb-439b-9fe2-3e373f870719"
-$secpassword = convertto-securestring "hx6NCNBoiKYb+yIKHFWUJqjUXuhYa7kxZ7F1TFohvro=" -AsPlainText -Force
-$credential = new-object -typename System.Management.Automation.PScredential -argumentlist $applicationId, $secpassword
-
-Connect-AzureRMAccount -ServicePrincipal -credential $credential -TenantId "b37600f0-1e5e-48fb-b34d-d9bdb51cdbc5" -Subscription "a646d321-18de-4209-a895-5c7dec3a9ca0"
-
 $guidId = [System.Guid]::NewGuid()
 
-Write-Host "Creating Virtual Machine...ID = $guidId"
+# Get Authorization Info from enviornment variables
+$subscriptionId = $Env:SubscriptionId
+$clientId = $Env:ClientId
+$clientKey = $Env:ClientKey
+$tenantId = $Env:TenantId
 
-$imageName = "WIN2K12"
-$imageGroupName = "Refereance-Image-Storage-rg"
-$VMLocalAdminUser = "LocalAdminUser"
-$VMLocalAdminSecurePassword = ConvertTo-SecureString 'LocalAdminP@ssw0rd' -AsPlainText -Force
-$locationName = "WestUS"
+Write-Host "Getting Azure Authorization Info..."
+if ($null -eq $subscriptionId -or 
+    $null -eq $clientId -or
+    $null -eq $clientKey -or
+    $null -eq $tenantId)
+{
+    # Full Authorization Info not in Environment, try reading Yaml File authorization.yaml
+    $authInfo = Get-Content '.\authorization.yaml' | ConvertFrom-Yaml 
+    if ($null -eq $authInfo)
+    {
+        throw "Authorization Info Not Found!"
+    }
+    else 
+    {
+        $subscriptionId = $authInfo.SubscriptionId
+        $clientId = $authInfo.ClientId
+        $clientKey = $authInfo.ClientKey
+        $tenantId = $authInfo.TenantId
+    }
+}
+
+Write-Host "Connecting to Azure..."
+$secpassword = convertto-securestring $clientKey -AsPlainText -Force
+$credential = new-object -typename System.Management.Automation.PScredential -argumentlist $clientId, $secpassword
+
+Connect-AzureRMAccount -ServicePrincipal -credential $credential -TenantId $tenantId -Subscription $subscriptionId
+
+Write-Host "Getting Image Configuration Info..."
+
+$imageInfo = Get-Content '.\image.yaml' | ConvertFrom-Yaml
+if ($null -eq $imageInfo)
+{
+    throw "Unable to Read Image Configuration File!"
+}
+
+$imageName = $imageInfo.ImageName
+$imageGroupName = $imageInfo.ImageGroup
+$VMLocalAdminUser = $imageInfo.AdminUser
+$VMLocalAdminSecurePassword = ConvertTo-SecureString $imageInfo.AdminPW -AsPlainText -Force
+$locationName = $imageInfo.Location
 $rgName = "$guidId-rg"
-$computerName = "REFERENCE-VM"
+$computerName = $imageInfo.ComputerName
 $VMName = ([string]$guidId).SubString(0,12) + "-vm"
-$VMSize = "Standard_DS3"
+$VMSize = $imageInfo.VMSizeType
 
+Write-Host "Creating Virtual Machine...ID = $guidId"
 $networkName = "$guidId-vnet"
 $NICName = "$guidId-nic"
 $SubnetName = "$guidId-subnet"
@@ -39,7 +71,7 @@ $credential = New-Object System.Management.Automation.PScredential ($VMLocalAdmi
 $vm = New-AzureRmVMConfig -VMName $VMName -VMSize $VMSize
 $vm = Set-AzureRmVMOperatingSystem -VM $vm -Windows -computerName $computerName -credential $credential -ProvisionVMAgent -EnableAutoUpdate
 $vm = Add-AzureRmVMNetworkInterface -VM $vm -Id $NIC.Id
-$vm = Set-AzureRmVMSourceImage -VM $vm -PublisherName 'MicrosoftWindowsServer' -Offer 'WindowsServer' -Skus '2012-R2-Datacenter' -Version latest
+$vm = Set-AzureRmVMSourceImage -VM $vm -PublisherName $imageInfo.VMPublisher -Offer $imageInfo.VMOffer -Skus $imageInfo.VMSKU -Version latest
 
 New-AzureRmVM -ResourceGroupName $rgName -Location $locationName -VM $vm -Verbose
 
@@ -63,7 +95,7 @@ $imageName += "-" + (Get-Date -Format s).Replace(":",".")
 
 New-AzureRmImage -ImageName $imageName -ResourceGroupName $imageGroupName -Image $imageConfig
 
-Write-Host "Deleting Resource4 Group..."
+Write-Host "Deleting Resource Group..."
 Remove-AzureRmResourceGroup -Name $rgName -Force
 
 $elapsedTime = new-timespan $script:StartTime $(get-date)

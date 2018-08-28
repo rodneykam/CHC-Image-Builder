@@ -27,6 +27,7 @@ namespace CHC_Image_Builder
         private string _clientKey { get; set; }
         private string _tenantId { get; set; }
         private Region _location = Region.USWest;
+        private string _groupName { get; set; }
         private IAzure _azure { get; set; }
         private ImageInfo _imageInfo { get; set; }
 
@@ -107,16 +108,16 @@ namespace CHC_Image_Builder
             try 
             {
                 var guidVM = Guid.NewGuid().ToString();
-                _imageInfo.GroupName = guidVM + "-rg";
-               Logger.log.InfoFormat("Creating Resource Group {0}", _imageInfo.GroupName);
-                var resourceGroup = _azure.ResourceGroups.Define(_imageInfo.GroupName)
+                _groupName = guidVM + "-rg";
+               Logger.log.InfoFormat("Creating Resource Group {0}", _groupName);
+                var resourceGroup = _azure.ResourceGroups.Define(_groupName)
                     .WithRegion(_location)
                     .Create();
 
                Logger.log.Info("Creating public IP address...");
                 var publicIPAddress = _azure.PublicIPAddresses.Define(guidVM + "-pubip")
                     .WithRegion(_location)
-                    .WithExistingResourceGroup(_imageInfo.GroupName)
+                    .WithExistingResourceGroup(_groupName)
                     .WithStaticIP()
                     .Create();
 
@@ -124,7 +125,7 @@ namespace CHC_Image_Builder
                 var subnetName = guidVM + "-subnet"; 
                 var network = _azure.Networks.Define(guidVM + "-vnet")
                     .WithRegion(_location)
-                    .WithExistingResourceGroup(_imageInfo.GroupName)
+                    .WithExistingResourceGroup(_groupName)
                     .WithAddressSpace("10.0.0.0/16")
                     .WithSubnet(subnetName, "10.0.0.0/24")
                     .Create();
@@ -132,7 +133,7 @@ namespace CHC_Image_Builder
                Logger.log.Info("Creating network interface...");
                 var networkInterface = _azure.NetworkInterfaces.Define(guidVM + "-NIC")
                     .WithRegion(_location)
-                    .WithExistingResourceGroup(_imageInfo.GroupName)
+                    .WithExistingResourceGroup(_groupName)
                     .WithExistingPrimaryNetwork(network)
                     .WithSubnet(subnetName)
                     .WithPrimaryPrivateIPAddressDynamic()
@@ -143,19 +144,19 @@ namespace CHC_Image_Builder
                  
                  _azure.VirtualMachines.Define(_imageInfo.VMName)
                     .WithRegion(_location)
-                    .WithExistingResourceGroup(_imageInfo.GroupName)
+                    .WithExistingResourceGroup(_groupName)
                     .WithExistingPrimaryNetworkInterface(networkInterface)
-                    .WithLatestWindowsImage(_imageInfo.OSImage.Publisher, _imageInfo.OSImage.Offer, _imageInfo.OSImage.SKU)
+                    .WithLatestWindowsImage(_imageInfo.VMPublisher, _imageInfo.VMOffer, _imageInfo.VMSKU)
                     .WithAdminUsername(_imageInfo.AdminUser)
                     .WithAdminPassword(_imageInfo.AdminPW)
                     .WithComputerName(_imageInfo.VMName)
-                    .WithSize(_imageInfo.OSImage.VMSizeType)
+                    .WithSize(_imageInfo.VMSizeType)
                     .Create();
                 
                 /*
                 var managedDisk = _azure.Disks.Define(guidVM + "-osdisk")
                     .WithRegion(_location)
-                    .WithExistingResourceGroup(_imageInfo.GroupName)
+                    .WithExistingResourceGroup(_groupName)
                     .WithWindowsFromVhd(string.Format("https://mystorage.blob.core.windows.net/vhds/{0}.vhd", guidVM + "-osdisk"))
                     .WithSizeInGB(128)
                     .WithSku(DiskSkuTypes.PremiumLRS)
@@ -163,7 +164,7 @@ namespace CHC_Image_Builder
 
                 _azure.VirtualMachines.Define(_imageInfo.VMName)
                     .WithRegion(_location)
-                    .WithExistingResourceGroup(_imageInfo.GroupName)
+                    .WithExistingResourceGroup(_groupName)
                     .WithExistingPrimaryNetworkInterface(networkInterface)
                     .WithSpecializedOSDisk(managedDisk, OperatingSystemTypes.Windows)
                     .WithSize(VirtualMachineSizeTypes.StandardDS1)
@@ -172,7 +173,7 @@ namespace CHC_Image_Builder
                Logger.log.InfoFormat("Creating virtual machine...{0} Complete!", _imageInfo.VMName);
 
                Logger.log.InfoFormat("Deallocating and Generalize virtual machine...{0}", _imageInfo.VMName);
-                var vm = _azure.VirtualMachines.GetByResourceGroup(_imageInfo.GroupName, _imageInfo.VMName);
+                var vm = _azure.VirtualMachines.GetByResourceGroup(_groupName, _imageInfo.VMName);
                 vm.Deallocate();
                 vm.Generalize();
 
@@ -238,7 +239,7 @@ namespace CHC_Image_Builder
         public void CreateImage()
         {
             // $diskID = $vm.StorageProfile.OsDisk.ManagedDisk.Id
-           var vm = _azure.VirtualMachines.GetByResourceGroup(_imageInfo.GroupName, _imageInfo.VMName);
+           var vm = _azure.VirtualMachines.GetByResourceGroup(_groupName, _imageInfo.VMName);
 
            var diskId = vm.StorageProfile.OsDisk.ManagedDisk.Id;
 
