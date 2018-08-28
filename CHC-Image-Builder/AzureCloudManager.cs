@@ -9,6 +9,7 @@ using Microsoft.Azure.Management.Fluent;
 using Microsoft.Azure.Management.ResourceManager.Fluent.Core;
 using static CHC_Image_Builder.ImageConfiguration;
 using Microsoft.Azure.Management.Compute.Fluent.Models;
+using Microsoft.Azure.Management.Compute;
 using Microsoft.Azure.Management.Storage.Fluent.Models;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
@@ -236,8 +237,21 @@ namespace CHC_Image_Builder
 
         public void CreateImage()
         {
+            // $diskID = $vm.StorageProfile.OsDisk.ManagedDisk.Id
+           var vm = _azure.VirtualMachines.GetByResourceGroup(_imageInfo.GroupName, _imageInfo.VMName);
 
+           var diskId = vm.StorageProfile.OsDisk.ManagedDisk.Id;
+
+            var imageOSDisk = new ImageOSDisk();
+            imageOSDisk.OsState = OperatingSystemStateTypes.Generalized;
+            imageOSDisk.OsType = OperatingSystemTypes.Windows;
+            imageOSDisk.StorageAccountType = StorageAccountTypes.PremiumLRS;
+
+            var subResource = new SubResource(diskId);
+            imageOSDisk.ManagedDisk = subResource;
+            
         }
+
     }
 
 }
