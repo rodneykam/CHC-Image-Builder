@@ -13,6 +13,8 @@ using Microsoft.Azure.Management.Storage.Fluent.Models;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
 using Microsoft.Azure.Management.Storage.Fluent;
+using System.Management.Automation;
+using System.Management.Automation.Runspaces;
 
 namespace CHC_Image_Builder
 {
@@ -66,6 +68,15 @@ namespace CHC_Image_Builder
                Logger.log.DebugFormat("  TenantId: {0}", _tenantId);
             }
         }
+        public void CreateVMImage(ImageInfo imageInfo)
+        {
+            _imageInfo = imageInfo;
+            Authenticate();    
+            CreateVM();
+            CreateImage();
+
+        }
+
         private void Authenticate()
         {
             try
@@ -87,16 +98,9 @@ namespace CHC_Image_Builder
                Logger.log.Error(e);
                 throw;
             }
-
         }
 
-        public void CreateVMImage(ImageInfo imageInfo)
-        {
-            _imageInfo = imageInfo;
-            Authenticate();    
-            CreateVM();
 
-        }
         public void CreateVM()
         {
             try 
@@ -134,8 +138,9 @@ namespace CHC_Image_Builder
                     .Create();
 
                 _imageInfo.VMName = guidVM.Substring(0,12) + "-vm";
-                Logger.log.InfoFormat("Creating virtual machine...{0}", _imageInfo.VMName);
-                _azure.VirtualMachines.Define(_imageInfo.VMName)
+                Logger.log.InfoFormat("Creating virtual machine...{0}", _imageInfo.VMName);                
+                 
+                 _azure.VirtualMachines.Define(_imageInfo.VMName)
                     .WithRegion(_location)
                     .WithExistingResourceGroup(_imageInfo.GroupName)
                     .WithExistingPrimaryNetworkInterface(networkInterface)
@@ -145,7 +150,24 @@ namespace CHC_Image_Builder
                     .WithComputerName(_imageInfo.VMName)
                     .WithSize(_imageInfo.OSImage.VMSizeType)
                     .Create();
+                
+                /*
+                var managedDisk = _azure.Disks.Define(guidVM + "-osdisk")
+                    .WithRegion(_location)
+                    .WithExistingResourceGroup(_imageInfo.GroupName)
+                    .WithWindowsFromVhd(string.Format("https://mystorage.blob.core.windows.net/vhds/{0}.vhd", guidVM + "-osdisk"))
+                    .WithSizeInGB(128)
+                    .WithSku(DiskSkuTypes.PremiumLRS)
+                    .Create();
 
+                _azure.VirtualMachines.Define(_imageInfo.VMName)
+                    .WithRegion(_location)
+                    .WithExistingResourceGroup(_imageInfo.GroupName)
+                    .WithExistingPrimaryNetworkInterface(networkInterface)
+                    .WithSpecializedOSDisk(managedDisk, OperatingSystemTypes.Windows)
+                    .WithSize(VirtualMachineSizeTypes.StandardDS1)
+                    .Create();
+                */
                Logger.log.InfoFormat("Creating virtual machine...{0} Complete!", _imageInfo.VMName);
 
                Logger.log.InfoFormat("Deallocating and Generalize virtual machine...{0}", _imageInfo.VMName);
@@ -203,9 +225,6 @@ namespace CHC_Image_Builder
                    Logger.log.Info("  level: " + stat.Level);
                    Logger.log.Info("  displayStatus: " + stat.DisplayStatus);
                 }
-
-                Logger.log.Info("Capturing VM Image...");
-                vm.Capture("tempContainer","WIN2K12", true);
             }
             catch (Exception e)
             {
@@ -215,7 +234,10 @@ namespace CHC_Image_Builder
 
         }
 
+        public void CreateImage()
+        {
 
+        }
     }
 
 }
