@@ -1,3 +1,5 @@
+Import-Module AzureRM
+
 $ErrorActionPreference = "Stop"
 
 $script:StartTime = $(get-date)
