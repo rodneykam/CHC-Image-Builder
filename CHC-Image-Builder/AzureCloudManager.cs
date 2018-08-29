@@ -76,7 +76,6 @@ namespace CHC_Image_Builder
             Authenticate();    
             CreateVM();
             CreateImage();
-
         }
 
         private void Authenticate()
@@ -109,7 +108,7 @@ namespace CHC_Image_Builder
             {
                 var guidVM = Guid.NewGuid().ToString();
                 _groupName = guidVM + "-rg";
-               Logger.log.InfoFormat("Creating Resource Group {0}", _groupName);
+                Logger.log.InfoFormat("Creating Resource Group {0}", _groupName);
                 var resourceGroup = _azure.ResourceGroups.Define(_groupName)
                     .WithRegion(_location)
                     .Create();
@@ -149,27 +148,10 @@ namespace CHC_Image_Builder
                     .WithLatestWindowsImage(_imageInfo.VMPublisher, _imageInfo.VMOffer, _imageInfo.VMSKU)
                     .WithAdminUsername(_imageInfo.AdminUser)
                     .WithAdminPassword(_imageInfo.AdminPW)
-                    .WithComputerName(_imageInfo.VMName)
+                    .WithComputerName(_imageInfo.ComputerName)
                     .WithSize(_imageInfo.VMSizeType)
                     .Create();
                 
-                /*
-                var managedDisk = _azure.Disks.Define(guidVM + "-osdisk")
-                    .WithRegion(_location)
-                    .WithExistingResourceGroup(_groupName)
-                    .WithWindowsFromVhd(string.Format("https://mystorage.blob.core.windows.net/vhds/{0}.vhd", guidVM + "-osdisk"))
-                    .WithSizeInGB(128)
-                    .WithSku(DiskSkuTypes.PremiumLRS)
-                    .Create();
-
-                _azure.VirtualMachines.Define(_imageInfo.VMName)
-                    .WithRegion(_location)
-                    .WithExistingResourceGroup(_groupName)
-                    .WithExistingPrimaryNetworkInterface(networkInterface)
-                    .WithSpecializedOSDisk(managedDisk, OperatingSystemTypes.Windows)
-                    .WithSize(VirtualMachineSizeTypes.StandardDS1)
-                    .Create();
-                */
                Logger.log.InfoFormat("Creating virtual machine...{0} Complete!", _imageInfo.VMName);
 
                Logger.log.InfoFormat("Deallocating and Generalize virtual machine...{0}", _imageInfo.VMName);
@@ -238,19 +220,20 @@ namespace CHC_Image_Builder
 
         public void CreateImage()
         {
-            // $diskID = $vm.StorageProfile.OsDisk.ManagedDisk.Id
+           Logger.log.InfoFormat("Creating Image...{0}", _imageInfo.VMName);
+
+           var imageName = _imageInfo.ImageName + DateTime.Now.ToString("yyyy-mm-dd.HHmmss");
            var vm = _azure.VirtualMachines.GetByResourceGroup(_groupName, _imageInfo.VMName);
+           var image = _azure.VirtualMachineCustomImages.Define(imageName)
+                    .WithRegion(_location)
+                    .WithExistingResourceGroup(_imageInfo.ImageGroup)
+                    .FromVirtualMachine(vm)
+                    .Create();
+            Logger.log.InfoFormat("Created Image...{0}", _imageInfo.VMName);
 
-           var diskId = vm.StorageProfile.OsDisk.ManagedDisk.Id;
-
-            var imageOSDisk = new ImageOSDisk();
-            imageOSDisk.OsState = OperatingSystemStateTypes.Generalized;
-            imageOSDisk.OsType = OperatingSystemTypes.Windows;
-            imageOSDisk.StorageAccountType = StorageAccountTypes.PremiumLRS;
-
-            var subResource = new SubResource(diskId);
-            imageOSDisk.ManagedDisk = subResource;
-            
+            // Delete Resource Group after Image is created
+            Logger.log.InfoFormat("Deleting Resource Group...{0}", _groupName);
+            _azure.ResourceGroups.DeleteByName(_groupName);
         }
 
     }
