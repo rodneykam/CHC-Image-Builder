@@ -27,7 +27,7 @@ namespace CHC_Image_Builder
 
         public ImageInfo GetImageInfo()
         {
-            var yamlFile = Path.Combine(Environment.CurrentDirectory, @"image.yaml");
+            var yamlFile = Path.Combine(Environment.CurrentDirectory, @"App_Data\Image.yaml");
             TextReader input = new StreamReader(yamlFile);
 
             var deserializer = new DeserializerBuilder()

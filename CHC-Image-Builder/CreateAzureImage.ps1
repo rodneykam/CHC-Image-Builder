@@ -16,7 +16,7 @@ if ($null -eq $subscriptionId -or
     $null -eq $tenantId)
 {
     # Full Authorization Info not in Environment, try reading Yaml File authorization.yaml
-    $authInfo = Get-Content '.\authorization.yaml' | ConvertFrom-Yaml 
+    $authInfo = Get-Content '.\App_Data\authorization.json' | ConvertFrom-JSON 
     if ($null -eq $authInfo)
     {
         throw "Authorization Info Not Found!"
@@ -38,7 +38,7 @@ Connect-AzureRMAccount -ServicePrincipal -credential $credential -TenantId $tena
 
 Write-Host "Getting Image Configuration Info..."
 
-$imageInfo = Get-Content '.\image.yaml' | ConvertFrom-Yaml
+$imageInfo = Get-Content '.\App_Data\image.json' | ConvertFrom-JSON
 if ($null -eq $imageInfo)
 {
     throw "Unable to Read Image Configuration File!"

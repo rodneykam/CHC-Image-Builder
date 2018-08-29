@@ -42,7 +42,7 @@ namespace CHC_Image_Builder
             {
                 try
                 {
-                    var yamlFile = Path.Combine(Environment.CurrentDirectory, @"authorization.yaml");
+                    var yamlFile = Path.Combine(Environment.CurrentDirectory, @"App_Data\authorization.yaml");
                     TextReader input = new StreamReader(yamlFile);
 
                     var yaml = new YamlStream();
