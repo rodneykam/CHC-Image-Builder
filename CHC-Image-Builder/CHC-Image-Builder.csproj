@@ -6,10 +6,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Remove="authorization.yaml" />
-    <None Remove="Image.yaml" />
-    <None Remove="log4net.config" />
-  </ItemGroup>
+    <Content Include="App_Data\*" CopyToPublishDirectory="PreserveNewest" />
+</ItemGroup>
 
   <ItemGroup>
     <Content Include="log4net.config">
